@@ -6,9 +6,7 @@
 #define KALEIDOSCOPE_MY_LANG_H
 
 
-class my_lang {
-
-};
+class my_lang {};
 
 
 #endif //KALEIDOSCOPE_MY_LANG_H

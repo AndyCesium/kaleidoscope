@@ -2,9 +2,11 @@
 // Created by Andy Chow on 6/15/2022.
 //
 
+#include "my_lang.h"
 #include <string>
 #include <iostream>
-#include "my_lang.h"
+#include <vector>
+#include <memory>
 
 using namespace std;
 
@@ -20,8 +22,8 @@ enum Token {
     tok_number = -5,
 };
 
-static string IdentifierStr; // Filled in if tok_identifier
-static double NumVal;             // Filled in if tok_number
+static string IdentifierStr;        // Filled in if tok_identifier
+static double NumVal;               // Filled in if tok_number
 
 static int gettok() {
     static int LastChar = ' ';
@@ -77,9 +79,79 @@ static int gettok() {
     return ThisChar;
 }
 
+/// ExprAST - Base class for all expression nodes.
+class ExprAST {
+public:
+    virtual ~ExprAST() {}
+};
+
+/// NumberExprAST - Expression class for numeric literals
+class NumberExprAST : public ExprAST {
+    double Val;
+
+public:
+    NumberExprAST(double V) : Val(V) {}
+};
+
+/// VariableExprAST - Expression class for referencing a variable
+class VariableExprAST : public ExprAST {
+    string Name;
+
+public:
+    VariableExprAST(const string& Name) : Name(Name) {}
+};
+
+/// BinaryExprAST - Expression class for a binary operator.
+class BinaryExprAST : public ExprAST {
+    char Op;
+    unique_ptr<ExprAST> LHS, RHS;
+
+public:
+    BinaryExprAST(char op, unique_ptr<ExprAST> LHS, unique_ptr<ExprAST> RHS)
+            : Op(op), LHS(move(LHS)), RHS(move(RHS)) {}
+};
+
+/// CallExprAST - Expression class for function calls.
+class CallExprAST : public ExprAST {
+    string Callee;
+    vector<unique_ptr<ExprAST>> Args;
+
+public:
+    CallExprAST(const string& Callee,
+                vector<unique_ptr<ExprAST>> Args)
+            : Callee(Callee), Args(move(Args)) {}
+};
+
+/// PrototypeAST - This class represents the "prototype" for a function,
+/// which captures its name, and its argument names (thus implicitly the number
+/// of arguments the function takes).
+class PrototypeAST {
+    std::string Name;
+    std::vector<std::string> Args;
+
+public:
+    PrototypeAST(const std::string &name, std::vector<std::string> Args)
+            : Name(name), Args(std::move(Args)) {}
+
+    const std::string &getName() const { return Name; }
+};
+
+/// FunctionAST - This class represents a function definition itself.
+class FunctionAST {
+    std::unique_ptr<PrototypeAST> Proto;
+    std::unique_ptr<ExprAST> Body;
+
+public:
+    FunctionAST(std::unique_ptr<PrototypeAST> Proto,
+                std::unique_ptr<ExprAST> Body)
+            : Proto(std::move(Proto)), Body(std::move(Body)) {}
+};
+
+/*
 int main() {
     while (true) {
         int tok = gettok();
         cout << "get token: " << tok << endl;
     }
 }
+ */
