@@ -98,7 +98,7 @@ class VariableExprAST : public ExprAST {
     string Name;
 
 public:
-    VariableExprAST(const string& Name) : Name(Name) {}
+    VariableExprAST(const string &Name) : Name(Name) {}
 };
 
 /// BinaryExprAST - Expression class for a binary operator.
@@ -117,7 +117,7 @@ class CallExprAST : public ExprAST {
     vector<unique_ptr<ExprAST>> Args;
 
 public:
-    CallExprAST(const string& Callee,
+    CallExprAST(const string &Callee,
                 vector<unique_ptr<ExprAST>> Args)
             : Callee(Callee), Args(move(Args)) {}
 };
@@ -146,6 +146,96 @@ public:
                 std::unique_ptr<ExprAST> Body)
             : Proto(std::move(Proto)), Body(std::move(Body)) {}
 };
+
+/// CurTok is the current token the parser is looking at.
+/// getNextToken reads another token from the lexer and updates CurTok with its results.
+static int CurTok;
+static int getNextTokken() {
+    return CurTok = gettok();
+}
+
+unique_ptr<ExprAST> LogError(const char *Str) {
+    fprintf(stderr, "LogError: %s\n", Str);
+    return nullptr;
+}
+
+unique_ptr<PrototypeAST> LogErrorP(const char * Str) {
+    LogError(Str);
+    return nullptr;
+}
+
+static unique_ptr<ExprAST> ParseNumberExpr() {
+    auto Result = make_unique<NumberExprAST>(NumVal);
+    getNextTokken();
+    return move(Result);
+}
+
+static unique_ptr<ExprAST> ParseParenExpr() {
+    getNextTokken();            // Eat '('
+    auto V = ParseExpression();
+    if (!V) {
+        return nullptr;
+    }
+
+    if (CurTok == ')') {
+        getNextTokken();        // Eat ')'
+        return V
+    } else {
+        return LogError("expect ')'");
+    }
+}
+
+static unique_ptr<ExprAST> ParseIdentifierOrCallExpr() {
+    string IdName = IdentifierStr;
+
+    getNextTokken();        // Eat the identifier
+
+    // Check if this is a function call
+    if (CurTok == '(') {
+        getNextTokken();    // Eat '('
+        vector<unique_ptr<ExprAST>> Args;
+
+        while (true) {
+            auto Arg = ParseExpression();
+            if (Arg) {
+                Args.push_back(Arg);
+            } else {
+                return nullptr;
+            }
+
+            if (CurTok == ')') {
+                getNextTokken();    // Eat ')'
+                break;
+            }
+
+            if (CurTok == ',') {
+                getNextTokken();    // Eat ','
+                continue;
+            } else {
+                LogError("Expected ')' or ',' in argument list");
+            }
+        }
+
+        return make_unique<CallExprAST>(IdName, move(Args));
+    }
+    // this is an identifier...
+    else {
+        return make_unique<VariableExprAST>(IdName);
+    }
+}
+
+static std::unique_ptr<ExprAST> ParsePrimary() {
+    switch (CurTok) {
+        case tok_identifier:
+            return ParseIdentifierOrCallExpr();
+        case tok_number:
+            return ParseNumberExpr();
+        case '(':
+            return ParseParenExpr();
+        default:
+            return LogError("unknown token when expecting an expression");
+    }
+}
 
 /*
 int main() {
