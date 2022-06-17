@@ -13,6 +13,8 @@
 using namespace std;
 
 
+static int gettok();
+
 /// ExprAST - Base class for all expression nodes
 class ExprAST;
 /// NumberExprAST - Expression class for numeric literals
@@ -43,8 +45,15 @@ static unique_ptr<ExprAST> ParsePrimary();
 static int GetTokPrecedence();
 static unique_ptr<ExprAST> ParseExpression();
 static unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec, unique_ptr<ExprAST> LHS);
+static unique_ptr<PrototypeAST> ParsePrototype();
+static unique_ptr<FunctionAST> ParseDefinition();
+static unique_ptr<PrototypeAST> ParseExtern();
+static unique_ptr<FunctionAST> ParseToplevelExpr();
 
-class my_lang {};
+static void HandleDefinition();
+static void HandleExtern();
+static void HandleTopLevelExpression();
+static void MainLoop();
 
 
 #endif //KALEIDOSCOPE_MY_LANG_H

@@ -11,6 +11,10 @@
 
 using namespace std;
 
+//===----------------------------------------------------------------------===//
+// Lexer
+//===----------------------------------------------------------------------===//
+
 enum Token {
     tok_eof = -1,
 
@@ -80,6 +84,10 @@ static int gettok() {
     return ThisChar;
 }
 
+//===----------------------------------------------------------------------===//
+// Abstract Syntax Tree
+//===----------------------------------------------------------------------===//
+
 class ExprAST {
 public:
     virtual ~ExprAST() {}
@@ -139,9 +147,13 @@ public:
             : Proto(std::move(Proto)), Body(std::move(Body)) {}
 };
 
+//===----------------------------------------------------------------------===//
+// Parser
+//===----------------------------------------------------------------------===//
+
 /// CurTok is the current token the parser is looking at.
 static int CurTok;
-static int getNextTokken() {
+static int getNextToken() {
     return CurTok = gettok();
 }
 
@@ -157,19 +169,19 @@ unique_ptr<PrototypeAST> LogErrorP(const char * Str) {
 
 static unique_ptr<ExprAST> ParseNumberExpr() {
     auto Result = make_unique<NumberExprAST>(NumVal);
-    getNextTokken();
+    getNextToken();
     return move(Result);
 }
 
 static unique_ptr<ExprAST> ParseParenExpr() {
-    getNextTokken();            // Eat '('
+    getNextToken();            // Eat '('
     auto V = ParseExpression();
     if (!V) {
         return nullptr;
     }
 
     if (CurTok == ')') {
-        getNextTokken();        // Eat ')'
+        getNextToken();        // Eat ')'
         return V;
     } else {
         return LogError("expect ')'");
@@ -179,11 +191,11 @@ static unique_ptr<ExprAST> ParseParenExpr() {
 static unique_ptr<ExprAST> ParseIdentifierOrCallExpr() {
     string IdName = IdentifierStr;
 
-    getNextTokken();        // Eat the identifier
+    getNextToken();        // Eat the identifier
 
     // Check if this is a function call
     if (CurTok == '(') {
-        getNextTokken();    // Eat '('
+        getNextToken();    // Eat '('
         vector<unique_ptr<ExprAST>> Args;
 
         while (true) {
@@ -195,12 +207,12 @@ static unique_ptr<ExprAST> ParseIdentifierOrCallExpr() {
             }
 
             if (CurTok == ')') {
-                getNextTokken();    // Eat ')'
+                getNextToken();    // Eat ')'
                 break;
             }
 
             if (CurTok == ',') {
-                getNextTokken();    // Eat ','
+                getNextToken();    // Eat ','
                 continue;
             } else {
                 LogError("Expected ')' or ',' in argument list");
@@ -285,10 +297,128 @@ static unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec, unique_ptr<ExprAST> LHS) 
     }
 }
 
+static unique_ptr<PrototypeAST> ParsePrototype() {
+    if (CurTok != tok_identifier) {
+        return LogErrorP("Expected '(' in prototype");
+    }
+
+    string FnName = IdentifierStr;
+    getNextToken();  // eat identifier
+
+    vector<string> ArgNames;
+    while (getNextToken() == tok_identifier) {
+        ArgNames.push_back(IdentifierStr);
+    }
+    if (CurTok != ')') {
+        return LogErrorP("Expected ')' in prototype");
+    }
+
+    getNextToken();
+
+    return make_unique<PrototypeAST>(FnName, move(ArgNames));
+}
+
+static unique_ptr<FunctionAST> ParseDefinition() {
+    getNextToken();  // eat def
+    auto Proto = ParsePrototype();
+    if (!Proto) {
+        return nullptr;
+    }
+
+    auto E = ParseExpression();
+    if (E) {
+        return make_unique<FunctionAST>(move(Proto),move(E));
+    } else {
+        return nullptr;
+    }
+}
+
+static unique_ptr<PrototypeAST> ParseExtern() {
+    getNextToken();  // get extern
+    return ParsePrototype();
+}
+
+static unique_ptr<FunctionAST> ParseTopLevelExpr() {
+    auto E = ParseExpression();
+    if (E) {
+        // Make an  anonymous proto.
+        auto Proto = make_unique<PrototypeAST>("", vector<string>());
+        return make_unique<FunctionAST>(move(Proto), move(E));
+    }
+    return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Top-Level parsing
+//===----------------------------------------------------------------------===//
+
+static void HandleDefinition() {
+    if (ParseDefinition()) {
+        fprintf(stderr, "Parsed a function definition.\n");
+    } else {
+        // Skip token for error recovery.
+        getNextToken();
+    }
+}
+
+static void HandleExtern() {
+    if (ParseExtern()) {
+        fprintf(stderr, "Parsed an extern\n");
+    } else {
+        // Skip token for error recovery.
+        getNextToken();
+    }
+}
+
+static void HandleTopLevelExpression() {
+    // Evaluate a top-level expression into an anonymous function.
+    if (ParseTopLevelExpr()) {
+        fprintf(stderr, "Parsed a top-level expr\n");
+    } else {
+        // Skip token for error recovery.
+        getNextToken();
+    }
+}
+
+static void MainLoop() {
+    while (true) {
+        switch (CurTok) {
+            case tok_eof:
+                return;
+            case ';': // ignore top-level semicolons.
+                fprintf(stderr, "ready>");
+                getNextToken();
+                break;
+            case tok_def:
+                HandleDefinition();
+                break;
+            case tok_extern:
+                HandleExtern();
+                break;
+            default:
+                HandleTopLevelExpression();
+                break;
+        }
+    }
+}
+
+//===----------------------------------------------------------------------===//
+// Main driver code.
+//===----------------------------------------------------------------------===//
+
 int main() {
     // Install standard binary operators.
     BinopPrecedence['<'] = 10;  // lowest.
     BinopPrecedence['+'] = 20;
     BinopPrecedence['-'] = 20;
     BinopPrecedence['*'] = 40;  // highest.
+
+    // Prime the first token.
+    fprintf(stderr, "ready>");
+    getNextToken();
+
+    // Run the main "interpreter loop".
+    MainLoop();
+
+    return 0;
 }
