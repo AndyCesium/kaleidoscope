@@ -1,3 +1,0 @@
-C:/Users/Andy Chow/Desktop/kaleidoscope/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/Andy Chow/Desktop/kaleidoscope/cmake-build-debug/CMakeFiles/kaleidoscope.dir
-C:/Users/Andy Chow/Desktop/kaleidoscope/cmake-build-debug/CMakeFiles/rebuild_cache.dir
