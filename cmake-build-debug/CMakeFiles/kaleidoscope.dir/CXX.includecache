@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/Users/Andy Chow/Desktop/kaleidoscope/my_lang.cpp
+my_lang.h
+C:/Users/Andy Chow/Desktop/kaleidoscope/my_lang.h
+string
+-
+iostream
+-
+vector
+-
+memory
+-
+map
+-
+
+C:/Users/Andy Chow/Desktop/kaleidoscope/my_lang.h
+string
+-
+iostream
+-
+vector
+-
+memory
+-
+map
+-
+
