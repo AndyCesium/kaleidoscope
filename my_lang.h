@@ -10,9 +10,6 @@
 #include <memory>
 #include <map>
 
-using namespace std;
-
-
 static int gettok();
 
 /// ExprAST - Base class for all expression nodes
@@ -34,21 +31,21 @@ class FunctionAST;
 
 /// getNextToken - Reads another token from the lexer and updates CurTok with its results.
 static int getNextToken();
-unique_ptr<ExprAST> LogError(const char *Str);
-unique_ptr<PrototypeAST> LogErrorP(const char * Str);
-static unique_ptr<ExprAST> ParseNumberExpr();
-static unique_ptr<ExprAST> ParseParenExpr();
-static unique_ptr<ExprAST> ParseIdentifierOrCallExpr();
-static unique_ptr<ExprAST> ParsePrimary();
+std::unique_ptr<ExprAST> LogError(const char *Str);
+std::unique_ptr<PrototypeAST> LogErrorP(const char * Str);
+static std::unique_ptr<ExprAST> ParseNumberExpr();
+static std::unique_ptr<ExprAST> ParseParenExpr();
+static std::unique_ptr<ExprAST> ParseIdentifierOrCallExpr();
+static std::unique_ptr<ExprAST> ParsePrimary();
 
 /// GetTokPrecedence get the precedence of the pending binary operator token.
 static int GetTokPrecedence();
-static unique_ptr<ExprAST> ParseExpression();
-static unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec, unique_ptr<ExprAST> LHS);
-static unique_ptr<PrototypeAST> ParsePrototype();
-static unique_ptr<FunctionAST> ParseDefinition();
-static unique_ptr<PrototypeAST> ParseExtern();
-static unique_ptr<FunctionAST> ParseToplevelExpr();
+static std::unique_ptr<ExprAST> ParseExpression();
+static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec, std::unique_ptr<ExprAST> LHS);
+static std::unique_ptr<PrototypeAST> ParsePrototype();
+static std::unique_ptr<FunctionAST> ParseDefinition();
+static std::unique_ptr<PrototypeAST> ParseExtern();
+static std::unique_ptr<FunctionAST> ParseToplevelExpr();
 
 static void HandleDefinition();
 static void HandleExtern();
