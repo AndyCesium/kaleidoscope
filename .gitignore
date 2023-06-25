@@ -1,4 +1,6 @@
 .vscode
+llvm
+llvm-c
 cmake-build-debug
 CMakeLists.txt
 *.out
