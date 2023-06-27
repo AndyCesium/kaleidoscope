@@ -49,7 +49,7 @@ static std::unique_ptr<FunctionAST> ParseDefinition();
 static std::unique_ptr<PrototypeAST> ParseExtern();
 static std::unique_ptr<FunctionAST> ParseTopLevelExpr();
 
-static void InitializeModule();
+static void InitializeModuleAndPassManager();
 static void HandleDefinition();
 static void HandleExtern();
 static void HandleTopLevelExpression();
