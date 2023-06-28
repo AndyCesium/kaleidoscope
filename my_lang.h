@@ -22,6 +22,8 @@ class BinaryExprAST;
 class CallExprAST;
 // IfExprAST - Expression class for if/then/else.
 class IfExprAST;
+// ForExprAST - Expression class for for/in.
+class ForExprAST;
 /**
  * PrototypeAST - This class represents the "prototype" for a function, which 
  * captures its name, and its argument names (thus implicitly the number of 
@@ -53,6 +55,8 @@ static std::unique_ptr<ExprAST> ParseParenExpr();
 static std::unique_ptr<ExprAST> ParseIdentifierExpr();
 // ifexpr ::= 'if' expression 'then' expression 'else' expression
 static std::unique_ptr<ExprAST> ParseIfExpr();
+// forexpr ::= 'for' identifier '=' expr ',' expr (',' expr)? 'in' expression
+static std::unique_ptr<ExprAST> ParseForExpr();
 /**
  * primary
  *     ::= identifierexpr
