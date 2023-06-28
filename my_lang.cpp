@@ -50,6 +50,11 @@ enum Token {
     // primary
     tok_identifier = -4,
     tok_number = -5,
+
+    //control
+    tok_if = -6,
+    tok_then = -7,
+    tok_else = -8,
 };
 
 static std::string IdentifierStr;   // Filled in if tok_identifier
@@ -71,6 +76,12 @@ static int gettok() {
             return tok_def;
         if (IdentifierStr == "extern")
             return tok_extern;
+        if (IdentifierStr == "if")
+            return tok_if;
+        if (IdentifierStr == "then")
+            return tok_then;
+        if (IdentifierStr == "else")
+            return tok_else;
         return tok_identifier;
     }
 
@@ -181,11 +192,22 @@ public:
     Function *codegen();
 };
 
+class IfExprAST : public ExprAST {
+    std::unique_ptr<ExprAST> Cond, Then, Else;
+
+public:
+    IfExprAST(std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Then,
+              std::unique_ptr<ExprAST> Else)
+        : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
+    Value *codegen() override;
+};
+
 //===----------------------------------------------------------------------===//
 // Parser
 //===----------------------------------------------------------------------===//
 
-/// CurTok is the current token the parser is looking at.
+// CurTok is the current token the parser is looking at.
 static int CurTok;
 static int getNextToken() {
     return CurTok = gettok();
@@ -233,7 +255,7 @@ static std::unique_ptr<ExprAST> ParseParenExpr() {
     return V;
 }
 
-static std::unique_ptr<ExprAST> ParseIdentifierOrCallExpr() {
+static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
     std::string IdName = IdentifierStr;
 
     getNextToken();        // Eat the identifier
@@ -265,14 +287,44 @@ static std::unique_ptr<ExprAST> ParseIdentifierOrCallExpr() {
     return std::make_unique<CallExprAST>(IdName, std::move(Args));
 }
 
+static std::unique_ptr<ExprAST> ParseIfExpr() {
+    getNextToken();     // eat the if.
+
+    auto Cond = ParseExpression();
+    if (!Cond)
+        return nullptr;
+    
+    if (CurTok != tok_then)
+        return LogError("Expected then");
+    getNextToken();   //eat the then
+
+    auto Then = ParseExpression();
+    if (!Then)
+        return nullptr;
+    
+    if (CurTok != tok_else)
+        return LogError("Expected else");
+    
+    getNextToken();
+
+    auto Else = ParseExpression();
+    if (!Else)
+        return nullptr;
+    
+    return std::make_unique<IfExprAST>(
+                            std::move(Cond),std::move(Then),std::move(Else));
+}
+
 static std::unique_ptr<ExprAST> ParsePrimary() {
     switch (CurTok) {
     case tok_identifier:
-        return ParseIdentifierOrCallExpr();
+        return ParseIdentifierExpr();
     case tok_number:
         return ParseNumberExpr();
     case '(':
         return ParseParenExpr();
+    case tok_if:
+        return ParseIfExpr();
     default:
         return LogError("Unknown token when expecting an expression");
     }
@@ -454,6 +506,59 @@ Value *CallExprAST::codegen() {
     return Builder->CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
+Value *IfExprAST::codegen() {
+    Value *CondV = Cond->codegen();
+    if (!CondV)
+        return nullptr;
+
+    // Convert condition to a bool by comparing non-equal to 0.0
+    CondV = Builder->CreateFCmpONE(
+        CondV, ConstantFP::get(*TheContext, APFloat(0.0)), "ifcond");
+    
+    Function *TheFunction = Builder->GetInsertBlock()->getParent();
+
+    // Create blocks for the then and else cases. Insert the 'then' block at
+    // the end of the function
+    BasicBlock *ThenBB = BasicBlock::Create(*TheContext, "then", TheFunction);
+    BasicBlock *ElseBB = BasicBlock::Create(*TheContext, "else");
+    BasicBlock *MergeBB = BasicBlock::Create(*TheContext, "ifcont");
+
+    Builder->CreateCondBr(CondV, ThenBB, ElseBB);
+
+    // Emit then value
+    Builder->SetInsertPoint(ThenBB);
+
+    Value *ThenV = Then->codegen();
+    if (!ThenV)
+        return nullptr;
+
+    Builder->CreateBr(MergeBB);
+    // Codegen of 'Then' can change the current block, update ThenBB for the PHI
+    ThenBB = Builder->GetInsertBlock();
+
+    // Emit else block
+    TheFunction->getBasicBlockList().push_back(ElseBB);
+    Builder->SetInsertPoint(ElseBB);
+
+    Value *ElseV = Else->codegen();
+    if (!ElseV)
+        return nullptr;
+
+    Builder->CreateBr(MergeBB);
+    // Codegen of 'Else' can change the current block, update ElseBB for the PHI
+    ElseBB = Builder->GetInsertBlock();
+
+    // Emit merge block
+    TheFunction->getBasicBlockList().push_back(MergeBB);
+    Builder->SetInsertPoint(MergeBB);
+    PHINode *PN = 
+        Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, "iftmp");
+
+    PN->addIncoming(ThenV, ThenBB);
+    PN->addIncoming(ElseV, ElseBB);
+    return PN;
+}
+
 Function *PrototypeAST::codegen() {
     std::vector<Type *> Doubles(Args.size(), Type::getDoubleTy(*TheContext));
 
@@ -567,11 +672,7 @@ static void HandleExtern() {
 static void HandleTopLevelExpression() {
     // Evaluate a top-level expression into an anonymous function.
     if (auto FnAST = ParseTopLevelExpr()) {
-        if (auto *FnIR = FnAST->codegen()) {
-            fprintf(stderr, "Read function definition:\n");
-            FnIR->print(errs());
-            fprintf(stderr, "\n");
-
+        if (FnAST->codegen()) {
             // Create a ResourceTracker to track JIT'd memory allocated to our
             // anonymous expression -- that way we can free it after executing.
             auto RT = TheJIT->getMainJITDylib().createResourceTracker();

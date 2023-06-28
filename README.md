@@ -20,4 +20,4 @@ $ clang++-15 -g my_lang.cpp `llvm-config-15 --cxxflags --ldflags --system-libs -
 $ ./toy.out
 ```
 
-[^1]: The tutoral seems to be updated using the lastest version. So there are libaries that is in the tutorial that is not in older versions of llvm. For learning llvm with older builds. I recommend checking code listings of older snapshots. This is the one that I have used: https://github.com/llvm/llvm-project/tree/8dfdcc7b7bf66834a761bd8de445840ef68e4d1a/llvm/examples/Kaleidoscope
+[^1]: The tutoral seems to be updated using the lastest developing version. So there are libaries that is in the tutorial/current version, but is not in older versions of llvm. For learning llvm with older builds. I recommend checking code listings of older snapshots. This is the one that I have used (version 15.0.7): https://github.com/llvm/llvm-project/tree/8dfdcc7b7bf66834a761bd8de445840ef68e4d1a/llvm/examples/Kaleidoscope
