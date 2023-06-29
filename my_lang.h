@@ -16,6 +16,8 @@ class ExprAST;
 class NumberExprAST;
 // VariableExprAST - Expression class for referencing a variable
 class VariableExprAST;
+// UnaryExprAST - Expression class for a unary operator.
+class UnaryExprAST;
 // BinaryExprAST - Expression class for a binary operator.
 class BinaryExprAST;
 // CallExprAST - Expression class for function calls.
@@ -66,12 +68,21 @@ static std::unique_ptr<ExprAST> ParseForExpr();
  *     ::= forexpr
  */
 static std::unique_ptr<ExprAST> ParsePrimary();
-
+/**
+ * unary
+ *     ::= primary
+ *     ::= '!' unary
+ */
+static std::unique_ptr<ExprAST> ParseUnary();
 // binoprhs ::= ('+' primary)*
 static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec, std::unique_ptr<ExprAST> LHS);
 // expression ::= primary binoprhs
 static std::unique_ptr<ExprAST> ParseExpression();
-// prototype ::= id '(' id* ')'
+/**
+ * prototype 
+ *     ::= id '(' id* ')'
+ *     ::= binary LETTER number? (id, id)
+ */
 static std::unique_ptr<PrototypeAST> ParsePrototype();
 // definition ::= 'def' prototype expression
 static std::unique_ptr<FunctionAST> ParseDefinition();
